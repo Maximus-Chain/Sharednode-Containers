@@ -3,7 +3,7 @@ name: Build osmium
 on:
   workflow_dispatch:
   push:
-    branches: [master, develop]
+    branches: [main, master, develop]
     paths: ['osmium/**']
     tags: ['osmium-*']
 
