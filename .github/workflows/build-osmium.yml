@@ -1,0 +1,17 @@
+name: Build osmium
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, develop]
+    paths: ['osmium/**']
+    tags: ['osmium-*']
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-chain.yml
+    with:
+      chain-name: osmium
+      context-path: ./osmium
+      image-name: maximus-chain/osmiumd
+    secrets: inherit

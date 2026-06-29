@@ -1,0 +1,83 @@
+# ============================================
+# Osmium Core - Local Development Stack
+# ============================================
+
+services:
+  # Osmium Core Node - Mainnet
+  osmiumd:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: osmium-local:latest
+    restart: unless-stopped
+    ports:
+      - "9968:9968"   # Mainnet RPC
+      - "9969:9969"   # Mainnet P2P
+    environment:
+      - DAEMON_ARGS=-rpcuser=osmium -rpcpassword=changeme_secure_password_here
+    expose:
+      - "9968"   # Mainnet RPC
+      - "9969"   # Mainnet P2P
+    volumes:
+      - osmium-data:/home/osmium/.osmiumcore
+    networks:
+      - osmium-net
+
+  # Osmium Core Node - Testnet
+  osmiumd-testnet:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: osmium-local:latest
+    container_name: osmiumd-testnet
+    restart: unless-stopped
+    profiles:
+      - testnet
+    ports:
+      - "19968:19968" # Testnet RPC
+      - "19969:19969" # Testnet P2P
+    environment:
+      - DAEMON_ARGS=-testnet=1 -rpcuser=osmium -rpcpassword=changeme_secure_password_here
+    expose:
+      - "19968" # Testnet RPC
+      - "19969" # Testnet P2P
+    volumes:
+      - osmium-testnet-data:/home/osmium/.osmiumcore
+    networks:
+      - osmium-net
+
+  # CLI client for debugging
+  osmium-cli:
+    image: osmium-local:latest
+    container_name: osmium-cli
+    profiles:
+      - cli
+    environment:
+      - RPC_USER=osmium
+      - RPC_PASSWORD=changeme_secure_password_here
+      - RPC_HOST=osmiumd
+      - RPC_PORT=9968
+    entrypoint: /usr/local/bin/osmium-cli
+    command: -rpcconnect=osmiumd -rpcport=9968 -rpcuser=osmium -rpcpassword=changeme_secure_password_here getnetworkinfo
+    depends_on:
+      - osmiumd
+    networks:
+      - osmium-net
+    volumes:
+      - osmium-data:/home/osmium/.osmiumcore:ro
+
+networks:
+  osmium-net:
+    driver: bridge
+
+volumes:
+  osmium-data:
+    driver: local
+  osmium-testnet-data:
+    driver: local

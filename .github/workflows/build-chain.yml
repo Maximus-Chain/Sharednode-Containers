@@ -1,0 +1,86 @@
+name: Build and Push Chain Image
+
+on:
+  workflow_call:
+    inputs:
+      chain-name:
+        description: 'Chain slug (used for cache key and binary lookup)'
+        required: true
+        type: string
+      context-path:
+        description: 'Path (relative to repo root) used as Docker build context'
+        required: true
+        type: string
+      image-name:
+        description: 'Full image name without registry, e.g. maximus-chain/osmiumd'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ inputs.image-name }}
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{(github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/'))}}
+          flavor: |
+            latest=auto
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache-${{ inputs.chain-name }}
+          key: ${{ runner.os }}-buildx-${{ inputs.chain-name }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ inputs.chain-name }}-
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context-path }}
+          file: ${{ inputs.context-path }}/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache-${{ inputs.chain-name }}
+          cache-to: type=local,dest=/tmp/.buildx-cache-${{ inputs.chain-name }}-new,mode=max
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache-${{ inputs.chain-name }}
+          mv /tmp/.buildx-cache-${{ inputs.chain-name }}-new /tmp/.buildx-cache-${{ inputs.chain-name }} 2>/dev/null || true
+
+      - name: Verify image
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          docker run --rm --entrypoint /usr/local/bin/${{ inputs.chain-name }}d \
+            "${{ env.REGISTRY }}/${{ inputs.image-name }}:sha-${SHORT_SHA}" --version
