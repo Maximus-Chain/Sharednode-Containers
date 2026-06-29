@@ -23,39 +23,44 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ inputs.image-name }}
-          tags: |
-            type=sha,format=short
-            type=ref,event=branch
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{(github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/'))}}
-          flavor: |
-            latest=auto
+      - name: Compute tags
+        id: tags
+        env:
+          CHAIN: ${{ inputs.chain-name }}
+          IMAGE: ${{ env.REGISTRY }}/${{ inputs.image-name }}
+        run: |
+          SHORT="${GITHUB_SHA::7}"
+          TAGLIST="${IMAGE}:sha-${SHORT}"
+          case "${GITHUB_REF}" in
+            refs/heads/main|refs/heads/master)
+              TAGLIST="${TAGLIST},${IMAGE}:latest"
+              ;;
+            refs/heads/develop)
+              TAGLIST="${TAGLIST},${IMAGE}:develop"
+              ;;
+            refs/tags/*)
+              TAG_NAME="${GITHUB_REF_NAME#${CHAIN}-}"
+              TAGLIST="${TAGLIST},${IMAGE}:${GITHUB_REF_NAME},${IMAGE}:${TAG_NAME},${IMAGE}:latest"
+              ;;
+          esac
+          echo "tags=${TAGLIST}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Docker layers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /tmp/.buildx-cache-${{ inputs.chain-name }}
           key: ${{ runner.os }}-buildx-${{ inputs.chain-name }}-${{ github.sha }}
@@ -63,14 +68,13 @@ jobs:
             ${{ runner.os }}-buildx-${{ inputs.chain-name }}-
 
       - name: Build and push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ inputs.context-path }}
           file: ${{ inputs.context-path }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache-${{ inputs.chain-name }}
           cache-to: type=local,dest=/tmp/.buildx-cache-${{ inputs.chain-name }}-new,mode=max
 
@@ -81,6 +85,6 @@ jobs:
 
       - name: Verify image
         run: |
-          SHORT_SHA="${GITHUB_SHA::7}"
-          docker run --rm --entrypoint /usr/local/bin/${{ inputs.chain-name }}d \
-            "${{ env.REGISTRY }}/${{ inputs.image-name }}:sha-${SHORT_SHA}" --version
+          SHORT="${GITHUB_SHA::7}"
+          docker run --rm --entrypoint "/usr/local/bin/${{ inputs.chain-name }}d" \
+            "${{ env.REGISTRY }}/${{ inputs.image-name }}:sha-${SHORT}" --version
