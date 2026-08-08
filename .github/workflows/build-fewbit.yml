@@ -1,0 +1,21 @@
+name: Build fewbit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master, develop]
+    paths: ['fewbit/**']
+    tags: ['fewbit-*']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-chain.yml
+    with:
+      chain-name: fewbit
+      context-path: ./fewbit
+      image-name: maximus-chain/fewbitd
+    secrets: inherit

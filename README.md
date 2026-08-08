@@ -3,6 +3,7 @@
 > Deployment configurations and CI pipelines for **Maximus SharedNode**-compatible blockchain node images. Dockerfiles, entrypoint scripts, Docker Compose stacks and GitHub Actions workflows for running nodes of multiple chains, with images published to GitHub Container Registry.
 
 [![Build osmium](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-osmium.yml/badge.svg)](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-osmium.yml)
+[![Build fewbit](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-fewbit.yml/badge.svg)](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-fewbit.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![GHCR](https://img.shields.io/badge/GHCR-maximus--chain-blue)](https://github.com/orgs/Maximus-Chain/packages)
 
@@ -20,7 +21,7 @@ Two patterns are supported, depending on where the image is built and published.
 
 ### Mode A — Built-in chains
 
-The chain source is fetched in the builder stage of our `Dockerfile`, compiled during CI and pushed to GitHub Container Registry by a workflow in `.github/workflows/build-<chain>.yml`. See [`osmium/`](./osmium) for a working example.
+The chain source is fetched in the builder stage of our `Dockerfile`, compiled during CI and pushed to GitHub Container Registry by a workflow in `.github/workflows/build-<chain>.yml`. See [`osmium/`](./osmium) and [`fewbit/`](./fewbit) for working examples.
 
 ### Mode B — Referenced chains
 
@@ -35,6 +36,7 @@ Built and published from this repository.
 | Chain   | Image                                              | Mainnet P2P / RPC | Testnet P2P / RPC | Workflow               |
 |---------|----------------------------------------------------|-------------------|-------------------|------------------------|
 | osmium  | `ghcr.io/maximus-chain/osmiumd`                    | 9969 / 9968       | 19969 / 19968     | `build-osmium.yml`     |
+| fewbit  | `ghcr.io/maximus-chain/fewbitd`                    | 1155 / 1154       | 11551 / 11541     | `build-fewbit.yml`     |
 | _next_  | _planned_                                          | –                 | –                 | `build-<chain>.yml`    |
 
 ### Referenced chains
@@ -66,6 +68,24 @@ docker run -d --name osmium-testnet \
   ghcr.io/maximus-chain/osmiumd:latest
 ```
 
+The same pattern works for any other built-in chain. For example, to run a FewBit mainnet node:
+
+```bash
+docker run -d --name fewbit-mainnet \
+  -p 1154:1154 -p 1155:1155 \
+  -e DAEMON_ARGS="-rpcuser=fewbit -rpcpassword=changeme_secure_password" \
+  ghcr.io/maximus-chain/fewbitd:latest
+```
+
+And for FewBit testnet:
+
+```bash
+docker run -d --name fewbit-testnet \
+  -p 11541:11541 -p 11551:11551 \
+  -e DAEMON_ARGS="-testnet=1 -rpcuser=fewbit -rpcpassword=changeme_secure_password" \
+  ghcr.io/maximus-chain/fewbitd:latest
+```
+
 ## Environment Variables
 
 The entrypoint accepts the following environment variables:
@@ -86,6 +106,17 @@ docker run -d --name osmium-mainnet \
   ghcr.io/maximus-chain/osmiumd:latest
 ```
 
+For FewBit, swap the image, user, data dir and ports:
+
+```bash
+docker run -d --name fewbit-mainnet \
+  -p 1154:1154 -p 1155:1155 \
+  -v fewbit-data:/home/fewbit/.fewbitcore \
+  -e DAEMON_ARGS="-rpcuser=fewbit -rpcpassword=changeme_secure_password -printtoconsole" \
+  -e SNAPSHOT_URL="https://example.com/fewbit-mainnet-snapshot.tar.xz" \
+  ghcr.io/maximus-chain/fewbitd:latest
+```
+
 ## Local Development
 
 Each chain ships a `docker-compose.yml` for local development and testing:
@@ -99,6 +130,15 @@ UID=$(id -u) GID=$(id -g) docker compose --profile testnet up -d
 
 # One-shot debug CLI (under the `cli` profile, runs `osmium-cli getnetworkinfo`)
 UID=$(id -u) GID=$(id -g) docker compose --profile cli run --rm osmium-cli
+```
+
+The same workflow works for FewBit:
+
+```bash
+cd fewbit
+UID=$(id -u) GID=$(id -g) docker compose up -d
+UID=$(id -u) GID=$(id -g) docker compose --profile testnet up -d
+UID=$(id -u) GID=$(id -g) docker compose --profile cli run --rm fewbit-cli
 ```
 
 The `UID`/`GID` exports match the build args so the daemon runs as your host user inside the container.
@@ -118,6 +158,15 @@ Verify the binary:
 ```bash
 docker run --rm --entrypoint /usr/local/bin/osmiumd osmium-local --version
 # Osmium Core version v1.2.0
+```
+
+The same commands apply to FewBit:
+
+```bash
+cd Sharednode-Containers/fewbit
+docker build -t fewbit-local .
+docker run --rm --entrypoint /usr/local/bin/fewbitd fewbit-local --version
+# FewBit Core version v6.6.0.0
 ```
 
 ## Adding a New Chain
@@ -148,7 +197,7 @@ The continuous integration pipeline is split into a single reusable workflow and
 
 - **Manual**: `workflow_dispatch` from the Actions UI.
 - **Automatic**: push to `main`, `master` or `develop` with paths under `<chain>/**`.
-- **Release**: tag pushes matching `<chain>-*` (for example `osmium-v1.2.0`).
+- **Release**: tag pushes matching `<chain>-*` (for example `osmium-v1.2.0` or `fewbit-v6.6.0.0`).
 
 #### Tags published
 

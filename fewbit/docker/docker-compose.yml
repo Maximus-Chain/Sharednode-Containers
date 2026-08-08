@@ -1,0 +1,83 @@
+# ============================================
+# FewBit Core - Local Development Stack
+# ============================================
+
+services:
+  # FewBit Core Node - Mainnet
+  fewbitd:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: fewbit-local:latest
+    restart: unless-stopped
+    ports:
+      - "1154:1154"   # Mainnet RPC
+      - "1155:1155"   # Mainnet P2P
+    environment:
+      - DAEMON_ARGS=-rpcuser=fewbit -rpcpassword=changeme_secure_password_here
+    expose:
+      - "1154"   # Mainnet RPC
+      - "1155"   # Mainnet P2P
+    volumes:
+      - fewbit-data:/home/fewbit/.fewbitcore
+    networks:
+      - fewbit-net
+
+  # FewBit Core Node - Testnet
+  fewbitd-testnet:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: fewbit-local:latest
+    container_name: fewbitd-testnet
+    restart: unless-stopped
+    profiles:
+      - testnet
+    ports:
+      - "11541:11541" # Testnet RPC
+      - "11551:11551" # Testnet P2P
+    environment:
+      - DAEMON_ARGS=-testnet=1 -rpcuser=fewbit -rpcpassword=changeme_secure_password_here
+    expose:
+      - "11541" # Testnet RPC
+      - "11551" # Testnet P2P
+    volumes:
+      - fewbit-testnet-data:/home/fewbit/.fewbitcore
+    networks:
+      - fewbit-net
+
+  # CLI client for debugging
+  fewbit-cli:
+    image: fewbit-local:latest
+    container_name: fewbit-cli
+    profiles:
+      - cli
+    environment:
+      - RPC_USER=fewbit
+      - RPC_PASSWORD=changeme_secure_password_here
+      - RPC_HOST=fewbitd
+      - RPC_PORT=1154
+    entrypoint: /usr/local/bin/fewbit-cli
+    command: -rpcconnect=fewbitd -rpcport=1154 -rpcuser=fewbit -rpcpassword=changeme_secure_password_here getnetworkinfo
+    depends_on:
+      - fewbitd
+    networks:
+      - fewbit-net
+    volumes:
+      - fewbit-data:/home/fewbit/.fewbitcore:ro
+
+networks:
+  fewbit-net:
+    driver: bridge
+
+volumes:
+  fewbit-data:
+    driver: local
+  fewbit-testnet-data:
+    driver: local
