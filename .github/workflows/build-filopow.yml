@@ -1,0 +1,21 @@
+name: Build filopow
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master, develop]
+    paths: ['filopow/**']
+    tags: ['filopow-*']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-chain.yml
+    with:
+      chain-name: filopow
+      context-path: ./filopow
+      image-name: maximus-chain/filopowd
+    secrets: inherit

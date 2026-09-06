@@ -1,0 +1,83 @@
+# ============================================
+# Filopow Core - Local Development Stack
+# ============================================
+
+services:
+  # Filopow Core Node - Mainnet
+  filopowd:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: filopow-local:latest
+    restart: unless-stopped
+    ports:
+      - "7766:7766"   # Mainnet RPC
+      - "7767:7767"   # Mainnet P2P
+    environment:
+      - DAEMON_ARGS=-rpcuser=filopow -rpcpassword=changeme_secure_password_here
+    expose:
+      - "7766"   # Mainnet RPC
+      - "7767"   # Mainnet P2P
+    volumes:
+      - filopow-data:/home/filopow/.filopowcore
+    networks:
+      - filopow-net
+
+  # Filopow Core Node - Testnet
+  filopowd-testnet:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: filopow-local:latest
+    container_name: filopowd-testnet
+    restart: unless-stopped
+    profiles:
+      - testnet
+    ports:
+      - "17766:17766" # Testnet RPC
+      - "17767:17767" # Testnet P2P
+    environment:
+      - DAEMON_ARGS=-testnet=1 -rpcuser=filopow -rpcpassword=changeme_secure_password_here
+    expose:
+      - "17766" # Testnet RPC
+      - "17767" # Testnet P2P
+    volumes:
+      - filopow-testnet-data:/home/filopow/.filopowcore
+    networks:
+      - filopow-net
+
+  # CLI client for debugging
+  filopow-cli:
+    image: filopow-local:latest
+    container_name: filopow-cli
+    profiles:
+      - cli
+    environment:
+      - RPC_USER=filopow
+      - RPC_PASSWORD=changeme_secure_password_here
+      - RPC_HOST=filopowd
+      - RPC_PORT=7766
+    entrypoint: /usr/local/bin/filopow-cli
+    command: -rpcconnect=filopowd -rpcport=7766 -rpcuser=filopow -rpcpassword=changeme_secure_password_here getnetworkinfo
+    depends_on:
+      - filopowd
+    networks:
+      - filopow-net
+    volumes:
+      - filopow-data:/home/filopow/.filopowcore:ro
+
+networks:
+  filopow-net:
+    driver: bridge
+
+volumes:
+  filopow-data:
+    driver: local
+  filopow-testnet-data:
+    driver: local
