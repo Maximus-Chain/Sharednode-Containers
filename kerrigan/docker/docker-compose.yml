@@ -1,0 +1,83 @@
+# ============================================
+# Kerrigan Core - Local Development Stack
+# ============================================
+
+services:
+  # Kerrigan Core Node - Mainnet
+  kerrigand:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: kerrigan-local:latest
+    restart: unless-stopped
+    ports:
+      - "7121:7121"   # Mainnet RPC
+      - "7120:7120"   # Mainnet P2P
+    environment:
+      - DAEMON_ARGS=-rpcuser=kerrigan -rpcpassword=changeme_secure_password_here
+    expose:
+      - "7121"   # Mainnet RPC
+      - "7120"   # Mainnet P2P
+    volumes:
+      - kerrigan-data:/home/kerrigan/.kerrigan
+    networks:
+      - kerrigan-net
+
+  # Kerrigan Core Node - Testnet
+  kerrigand-testnet:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    image: kerrigan-local:latest
+    container_name: kerrigand-testnet
+    restart: unless-stopped
+    profiles:
+      - testnet
+    ports:
+      - "17121:17121" # Testnet RPC
+      - "17120:17120" # Testnet P2P
+    environment:
+      - DAEMON_ARGS=-testnet=1 -rpcuser=kerrigan -rpcpassword=changeme_secure_password_here
+    expose:
+      - "17121" # Testnet RPC
+      - "17120" # Testnet P2P
+    volumes:
+      - kerrigan-testnet-data:/home/kerrigan/.kerrigan
+    networks:
+      - kerrigan-net
+
+  # CLI client for debugging
+  kerrigan-cli:
+    image: kerrigan-local:latest
+    container_name: kerrigan-cli
+    profiles:
+      - cli
+    environment:
+      - RPC_USER=kerrigan
+      - RPC_PASSWORD=changeme_secure_password_here
+      - RPC_HOST=kerrigand
+      - RPC_PORT=7121
+    entrypoint: /usr/local/bin/kerrigan-cli
+    command: -rpcconnect=kerrigand -rpcport=7121 -rpcuser=kerrigan -rpcpassword=changeme_secure_password_here getnetworkinfo
+    depends_on:
+      - kerrigand
+    networks:
+      - kerrigan-net
+    volumes:
+      - kerrigan-data:/home/kerrigan/.kerrigan:ro
+
+networks:
+  kerrigan-net:
+    driver: bridge
+
+volumes:
+  kerrigan-data:
+    driver: local
+  kerrigan-testnet-data:
+    driver: local

@@ -1,0 +1,21 @@
+name: Build kerrigan
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master, develop]
+    paths: ['kerrigan/**']
+    tags: ['kerrigan-*']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-chain.yml
+    with:
+      chain-name: kerrigan
+      context-path: ./kerrigan
+      image-name: maximus-chain/kerrigand
+    secrets: inherit

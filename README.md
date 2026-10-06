@@ -5,6 +5,7 @@
 [![Build osmium](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-osmium.yml/badge.svg)](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-osmium.yml)
 [![Build fewbit](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-fewbit.yml/badge.svg)](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-fewbit.yml)
 [![Build filopow](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-filopow.yml/badge.svg)](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-filopow.yml)
+[![Build kerrigan](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-kerrigan.yml/badge.svg)](https://github.com/Maximus-Chain/Sharednode-Containers/actions/workflows/build-kerrigan.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![GHCR](https://img.shields.io/badge/GHCR-maximus--chain-blue)](https://github.com/orgs/Maximus-Chain/packages)
 
@@ -39,6 +40,7 @@ Built and published from this repository.
 | osmium  | `ghcr.io/maximus-chain/osmiumd`                    | 9969 / 9968       | 19969 / 19968     | `build-osmium.yml`     |
 | fewbit  | `ghcr.io/maximus-chain/fewbitd`                    | 1155 / 1154       | 11551 / 11541     | `build-fewbit.yml`     |
 | filopow | `ghcr.io/maximus-chain/filopowd`                   | 7767 / 7766       | 17767 / 17766     | `build-filopow.yml`    |
+| kerrigan | `ghcr.io/maximus-chain/kerrigand`                 | 7120 / 7121       | 17120 / 17121     | `build-kerrigan.yml`   |
 | _next_  | _planned_                                          | –                 | –                 | `build-<chain>.yml`    |
 
 ### Referenced chains
@@ -108,6 +110,26 @@ docker run -d --name filopow-testnet \
 
 > Note: Filopow's upstream `src/Makefile.am` only builds `filopowd` and `filopow-cli`; `filopow-tx` is commented out and is not shipped in the image.
 
+The same pattern works for Kerrigan. For example, to run a Kerrigan mainnet node:
+
+```bash
+docker run -d --name kerrigan-mainnet \
+  -p 7120:7120 -p 7121:7121 \
+  -e DAEMON_ARGS="-rpcuser=kerrigan -rpcpassword=changeme_secure_password" \
+  ghcr.io/maximus-chain/kerrigand:latest
+```
+
+And for Kerrigan testnet:
+
+```bash
+docker run -d --name kerrigan-testnet \
+  -p 17120:17120 -p 17121:17121 \
+  -e DAEMON_ARGS="-testnet=1 -rpcuser=kerrigan -rpcpassword=changeme_secure_password" \
+  ghcr.io/maximus-chain/kerrigand:latest
+```
+
+> Note: Kerrigan's data dir is `~/.kerrigan` (no `core` suffix), and its image is built on Ubuntu 24.04 with a pinned Rust toolchain (1.81.0) instead of `make -C depends`.
+
 ## Environment Variables
 
 The entrypoint accepts the following environment variables:
@@ -150,6 +172,17 @@ docker run -d --name filopow-mainnet \
   ghcr.io/maximus-chain/filopowd:latest
 ```
 
+For Kerrigan:
+
+```bash
+docker run -d --name kerrigan-mainnet \
+  -p 7120:7120 -p 7121:7121 \
+  -v kerrigan-data:/home/kerrigan/.kerrigan \
+  -e DAEMON_ARGS="-rpcuser=kerrigan -rpcpassword=changeme_secure_password -printtoconsole" \
+  -e SNAPSHOT_URL="https://example.com/kerrigan-mainnet-snapshot.tar.xz" \
+  ghcr.io/maximus-chain/kerrigand:latest
+```
+
 ## Local Development
 
 Each chain ships a `docker-compose.yml` for local development and testing:
@@ -184,6 +217,15 @@ UID=$(id -u) GID=$(id -g) docker compose --profile cli run --rm filopow-cli
 ```
 
 > Note: Filopow's upstream `src/Makefile.am` only builds `filopowd` and `filopow-cli`; `filopow-tx` is commented out and is not shipped in the image.
+
+And for Kerrigan:
+
+```bash
+cd kerrigan
+UID=$(id -u) GID=$(id -g) docker compose up -d
+UID=$(id -u) GID=$(id -g) docker compose --profile testnet up -d
+UID=$(id -u) GID=$(id -g) docker compose --profile cli run --rm kerrigan-cli
+```
 
 The `UID`/`GID` exports match the build args so the daemon runs as your host user inside the container.
 
@@ -224,6 +266,15 @@ docker run --rm --entrypoint /usr/local/bin/filopowd filopow-local --version
 
 > Note: Filopow's upstream `src/Makefile.am` only builds `filopowd` and `filopow-cli`; `filopow-tx` is commented out and is not shipped in the image.
 
+And to Kerrigan:
+
+```bash
+cd Sharednode-Containers/kerrigan
+docker build -t kerrigan-local .
+docker run --rm --entrypoint /usr/local/bin/kerrigand kerrigan-local --version
+# Kerrigan version v1.3.2
+```
+
 ## Adding a New Chain
 
 Two options, depending on where the image is built.
@@ -252,7 +303,7 @@ The continuous integration pipeline is split into a single reusable workflow and
 
 - **Manual**: `workflow_dispatch` from the Actions UI.
 - **Automatic**: push to `main`, `master` or `develop` with paths under `<chain>/**`.
-- **Release**: tag pushes matching `<chain>-*` (for example `osmium-v1.2.0`, `fewbit-v6.6.0.0` or `filopow-v5.2.0`).
+- **Release**: tag pushes matching `<chain>-*` (for example `osmium-v1.2.0`, `fewbit-v6.6.0.0`, `filopow-v5.2.0` or `kerrigan-v1.3.2`).
 
 #### Tags published
 
