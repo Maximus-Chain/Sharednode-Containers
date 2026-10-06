@@ -83,6 +83,19 @@ RUN mkdir -p /build-output && \
   cp /home/kerrigan/build/out/bin/kerrigand /home/kerrigan/build/out/bin/kerrigan-cli /build-output/; \
   strip /build-output/*
 
+# Sapling zk-SNARK parameters. kerrigand needs them at startup and otherwise
+# tries to download them into ~/.zcash-params on every fresh container
+# (outside the data volume, from hosts that may be unreachable). Bake them
+# into the image, verified against the hashes hardcoded in upstream init.cpp.
+ARG SAPLING_PARAMS_URL=https://download.z.cash/downloads
+RUN mkdir -p /zcash-params && cd /zcash-params && \
+  curl -fsSL --retry 5 --retry-delay 5 -o sapling-spend.params ${SAPLING_PARAMS_URL}/sapling-spend.params && \
+  curl -fsSL --retry 5 --retry-delay 5 -o sapling-output.params ${SAPLING_PARAMS_URL}/sapling-output.params && \
+  printf '%s  %s\n' \
+    8e48ffd23abb3a5fd9c5589204f32d9c31285a04b78096ba40a79b75677efc13 sapling-spend.params \
+    2f0ebbcbb9bb0bcffe95a397e7eba89c29eb4dde6191c339db88570e3f3fb0e4 sapling-output.params \
+  | sha256sum -c -
+
 # ============================================
 # Stage 2: Runtime
 # Minimal image with only necessary binaries
@@ -137,6 +150,9 @@ RUN apt-get update && \
 
 # Copy binaries from builder
 COPY --from=builder /build-output/* /usr/local/bin/
+
+# Sapling parameters in kerrigand's default -saplingparamdir
+COPY --from=builder --chown=kerrigan:kerrigan /zcash-params /home/kerrigan/.zcash-params
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /docker-entrypoint.sh

@@ -128,7 +128,7 @@ docker run -d --name kerrigan-testnet \
   ghcr.io/maximus-chain/kerrigand:latest
 ```
 
-> Note: Kerrigan's data dir is `~/.kerrigan` (no `core` suffix), and its image is built on Ubuntu 24.04 with a pinned Rust toolchain (1.81.0) instead of `make -C depends`.
+> Note: Kerrigan's data dir is `~/.kerrigan` (no `core` suffix), and its image is built on Ubuntu 24.04 with a pinned Rust toolchain (1.81.0) instead of `make -C depends`. The Sapling zk-SNARK parameters (~50 MB, SHA256-verified) are baked into `/home/kerrigan/.zcash-params`, so the node never downloads them at startup.
 
 ## Environment Variables
 
