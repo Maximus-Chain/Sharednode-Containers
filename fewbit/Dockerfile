@@ -44,9 +44,10 @@ RUN apt-get update && \
 
 WORKDIR /home/fewbit
 
-# Clone FewBit repository (main branch, shallow)
+# Clone FewBit repository (pinned release tag, shallow)
+# GENESIS = FewBit Core 6.6.6.6
 ARG FEWBIT_REPO=https://github.com/fewbit-network/Core-Wallet.git
-ARG FEWBIT_BRANCH=main
+ARG FEWBIT_BRANCH=GENESIS
 RUN git clone --depth 1 --branch ${FEWBIT_BRANCH} ${FEWBIT_REPO} /home/fewbit/build
 
 WORKDIR /home/fewbit/build
