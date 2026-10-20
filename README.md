@@ -272,7 +272,7 @@ And to Kerrigan:
 cd Sharednode-Containers/kerrigan
 docker build -t kerrigan-local .
 docker run --rm --entrypoint /usr/local/bin/kerrigand kerrigan-local --version
-# Kerrigan version v1.3.2
+# Kerrigan version v1.4.0
 ```
 
 ## Adding a New Chain
@@ -303,7 +303,7 @@ The continuous integration pipeline is split into a single reusable workflow and
 
 - **Manual**: `workflow_dispatch` from the Actions UI.
 - **Automatic**: push to `main`, `master` or `develop` with paths under `<chain>/**`.
-- **Release**: tag pushes matching `<chain>-*` (for example `osmium-v1.2.0`, `fewbit-v6.6.0.0`, `filopow-v5.2.0` or `kerrigan-v1.3.2`).
+- **Release**: tag pushes matching `<chain>-*` (for example `osmium-v1.2.0`, `fewbit-v6.6.0.0`, `filopow-v5.2.0` or `kerrigan-v1.4.0`).
 
 #### Tags published
 

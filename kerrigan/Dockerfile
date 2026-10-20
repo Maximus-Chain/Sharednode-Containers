@@ -58,7 +58,7 @@ WORKDIR /home/kerrigan
 
 # Clone Kerrigan repository (pinned release tag, shallow)
 ARG KERRIGAN_REPO=https://github.com/kerrigan-network/kerrigan.git
-ARG KERRIGAN_BRANCH=v1.3.2
+ARG KERRIGAN_BRANCH=v1.4.0
 RUN git clone --depth 1 --branch ${KERRIGAN_BRANCH} ${KERRIGAN_REPO} /home/kerrigan/build
 
 WORKDIR /home/kerrigan/build
